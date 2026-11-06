@@ -762,7 +762,237 @@ function configurarFormularioRecepcao(){
   });
 }
 
-/* NAVEGAÇÃO DOS MÓDULOS */
+/* MÓDULO DE EMERGÊNCIA */
+
+function formularioEmergencia(){
+return `
+<div class="card">
+<h3>Acolhimento e avaliação inicial</h3>
+<p class="muted">Avaliação realizada pela equipe habilitada, conforme protocolo institucional.</p>
+
+<form id="form-emergencia">
+
+<label>Atendimento *</label>
+<select id="atendimento-emergencia" required>
+<option value="">Carregando...</option>
+</select>
+
+<label>Classificação de risco *</label>
+<select id="risco-emergencia" required>
+<option value="">Selecione</option>
+<option>Não classificado</option>
+<option>Baixo risco</option>
+<option>Moderado</option>
+<option>Alto risco</option>
+<option>Crítico</option>
+</select>
+
+<div class="form-grid">
+<div><label>Temperatura (°C)</label><input id="triagem-temperatura" type="number" step="0.1"></div>
+<div><label>Frequência cardíaca (bpm)</label><input id="triagem-fc" type="number"></div>
+<div><label>Frequência respiratória (irpm)</label><input id="triagem-fr" type="number"></div>
+<div><label>Pressão sistólica</label><input id="triagem-pas" type="number"></div>
+<div><label>Pressão diastólica</label><input id="triagem-pad" type="number"></div>
+<div><label>Saturação (%)</label><input id="triagem-sat" type="number" step="0.1"></div>
+<div><label>Glicemia (mg/dL)</label><input id="triagem-glicemia" type="number" step="0.1"></div>
+</div>
+
+<label>Observações</label>
+<input id="observacoes-emergencia" maxlength="2000">
+
+<label>Situação</label>
+<select id="status-emergencia">
+<option>Aguardando</option>
+<option>Em avaliação</option>
+<option>Encaminhado</option>
+<option>Concluído</option>
+</select>
+
+<div class="form-actions">
+<button class="primary" id="salvar-triagem" type="submit">SALVAR AVALIAÇÃO</button>
+</div>
+<p id="mensagem-emergencia"></p>
+</form>
+</div>
+
+<div class="panel">
+<h3>Fila da Emergência</h3>
+<p id="mensagem-fila-emergencia" class="muted">Carregando...</p>
+<div id="lista-fila-emergencia"></div>
+</div>`;
+}
+
+async function configurarEmergencia(){
+
+const form=document.getElementById("form-emergencia");
+const select=document.getElementById("atendimento-emergencia");
+const mensagem=document.getElementById("mensagem-emergencia");
+const botao=document.getElementById("salvar-triagem");
+const fila=document.getElementById("lista-fila-emergencia");
+const filaMensagem=document.getElementById("mensagem-fila-emergencia");
+
+let atendimentos=[];
+let nomes=new Map();
+let triagens=[];
+
+async function carregarFila(){
+
+fila.replaceChildren();
+filaMensagem.textContent="Carregando...";
+select.replaceChildren();
+
+const inicial=document.createElement("option");
+inicial.value="";
+inicial.textContent="Selecione o atendimento";
+select.appendChild(inicial);
+
+try{
+
+const [rAtend,rPac,rTri]=await Promise.all([
+
+supabaseClient.from("attendances")
+.select("id,attendance_number,patient_id,complaint,priority,status,created_at")
+.eq("destination_sector","Emergência")
+.order("created_at",{ascending:false})
+.limit(100),
+
+supabaseClient.from("patients")
+.select("id,full_name"),
+
+supabaseClient.from("emergency_triage")
+.select("id,attendance_id,risk_level,status,notes,temperature,heart_rate,respiratory_rate,systolic_bp,diastolic_bp,oxygen_saturation,glucose,created_at")
+.order("created_at",{ascending:false})
+.limit(100)
+
+]);
+
+if(rAtend.error)throw rAtend.error;
+if(rPac.error)throw rPac.error;
+if(rTri.error)throw rTri.error;
+
+atendimentos=rAtend.data||[];
+nomes=new Map((rPac.data||[]).map(p=>[p.id,p.full_name]));
+triagens=rTri.data||[];
+
+const avaliados=new Set(triagens.map(t=>t.attendance_id));
+
+atendimentos.filter(a=>!avaliados.has(a.id)).forEach(a=>{
+const op=document.createElement("option");
+op.value=a.id;
+op.textContent="Nº "+a.attendance_number+" — "+
+(nomes.get(a.patient_id)||"Paciente não localizado");
+select.appendChild(op);
+});
+
+filaMensagem.textContent=atendimentos.length+
+" atendimento(s) encaminhado(s) à Emergência.";
+
+if(!atendimentos.length){
+filaMensagem.textContent="Nenhum atendimento encaminhado à Emergência.";
+}
+
+atendimentos.forEach(a=>{
+
+const triagem=triagens.find(t=>t.attendance_id===a.id);
+const item=document.createElement("div");
+item.className="attendance-item";
+
+const titulo=document.createElement("strong");
+titulo.textContent="Atendimento nº "+a.attendance_number+
+" — "+(nomes.get(a.patient_id)||"Paciente não localizado");
+
+const queixa=document.createElement("p");
+queixa.textContent="Queixa: "+a.complaint;
+
+const risco=document.createElement("p");
+risco.textContent="Classificação: "+
+(triagem?.risk_level||"Aguardando avaliação");
+
+const status=document.createElement("p");
+status.textContent="Situação: "+(triagem?.status||a.status);
+
+item.append(titulo,queixa,risco,status);
+fila.appendChild(item);
+
+});
+
+}catch(erro){
+filaMensagem.textContent="Erro: "+erro.message;
+filaMensagem.className="error";
+}
+
+}
+
+form.addEventListener("submit",async(event)=>{
+
+event.preventDefault();
+mensagem.textContent="";
+mensagem.className="";
+
+const attendanceId=select.value;
+
+if(!attendanceId){
+mensagem.textContent="Selecione um atendimento.";
+mensagem.className="error";
+return;
+}
+
+const numero=id=>{
+const valor=document.getElementById(id).value;
+return valor===""?null:Number(valor);
+};
+
+botao.disabled=true;
+botao.textContent="SALVANDO...";
+
+try{
+
+const {data:usuarioData,error:usuarioErro}=
+await supabaseClient.auth.getUser();
+
+if(usuarioErro||!usuarioData.user){
+throw new Error("Sessão encerrada. Faça login novamente.");
+}
+
+const registro={
+attendance_id:attendanceId,
+risk_level:document.getElementById("risco-emergencia").value,
+status:document.getElementById("status-emergencia").value,
+notes:document.getElementById("observacoes-emergencia").value.trim()||null,
+temperature:numero("triagem-temperatura"),
+heart_rate:numero("triagem-fc"),
+respiratory_rate:numero("triagem-fr"),
+systolic_bp:numero("triagem-pas"),
+diastolic_bp:numero("triagem-pad"),
+oxygen_saturation:numero("triagem-sat"),
+glucose:numero("triagem-glicemia"),
+created_by:usuarioData.user.id
+};
+
+const {error}=await supabaseClient
+.from("emergency_triage")
+.insert([registro]);
+
+if(error)throw error;
+
+mensagem.textContent="Avaliação registrada com sucesso!";
+mensagem.className="success";
+
+form.reset();
+await carregarFila();
+
+}catch(erro){
+mensagem.textContent="Não foi possível salvar: "+erro.message;
+mensagem.className="error";
+}finally{
+botao.disabled=false;
+botao.textContent="SALVAR AVALIAÇÃO";
+}
+
+});
+
+await carregarFila();
+  }/* NAVEGAÇÃO DOS MÓDULOS */
 
 function show(i){
   [...nav.children].forEach((b,j)=>{
@@ -782,6 +1012,8 @@ function show(i){
     conteudo=formularioPacientes();
   }else if(i===2){
     conteudo=formularioRecepcao();
+  }else if(i===3){
+    conteudo=formularioEmergencia();
   }else{
     conteudo='<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>';
   }
@@ -795,6 +1027,7 @@ function show(i){
 
   if(i===1)configurarFormularioPaciente();
   if(i===2)configurarFormularioRecepcao();
+  if(i===3)configurarEmergencia();
 }
 
 modules.forEach((m,i)=>{
