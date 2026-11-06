@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -37,6 +36,8 @@ input,select{width:100%;padding:11px;border:1px solid #cbd6e1;border-radius:8px;
 .details-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
 .detail{padding:10px;background:#f3f6fa;border-radius:8px;overflow-wrap:anywhere}
 .detail b{display:block;font-size:12px;color:#617286;margin-bottom:4px}
+.attendance-item{border:1px solid #dce4ec;border-radius:9px;padding:12px;margin-top:9px}
+.attendance-item p{margin:5px 0}
 #login-hospital{position:fixed;inset:0;background:#f1f5f9;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial}
 .login-box{background:white;padding:25px;border-radius:12px;width:100%;max-width:380px}
 .login-box button{width:100%;padding:13px;background:#1e3a8a;color:white;margin-top:12px}
@@ -336,7 +337,6 @@ function renderizarLista(){
   );
 
   lista.replaceChildren();
-
   mensagem.className="muted";
 
   if(encontrados.length===0){
@@ -412,7 +412,7 @@ function configurarFormularioPaciente(){
     const dataNascimento=dados.get("birth_date");
     const idadeCalculada=calcularIdade(dataNascimento);
 
-    if(idadeCalculada==="" ){
+    if(idadeCalculada===""){
       mensagem.textContent="Informe uma data de nascimento válida.";
       mensagem.className="error";
       return;
@@ -492,6 +492,278 @@ function configurarFormularioPaciente(){
   carregarPacientes();
 }
 
+/* MÓDULO DE RECEPÇÃO */
+
+function formularioRecepcao(){
+return `
+<div class="card">
+  <h3>Registrar chegada do paciente</h3>
+  <p class="muted">Selecione um paciente já cadastrado.</p>
+
+  <form id="form-recepcao">
+    <label>Pesquisar paciente pelo nome</label>
+    <input
+      id="busca-paciente-recepcao"
+      type="search"
+      placeholder="Digite o nome do paciente"
+    >
+
+    <label>Paciente *</label>
+    <select id="paciente-recepcao" required>
+      <option value="">Carregando pacientes...</option>
+    </select>
+
+    <label>Queixa principal *</label>
+    <input
+      id="queixa-recepcao"
+      maxlength="1000"
+      required
+      placeholder="Descreva o motivo da procura"
+    >
+
+    <label>Prioridade *</label>
+    <select id="prioridade-recepcao" required>
+      <option value="Normal">Normal</option>
+      <option value="Urgente">Urgente</option>
+      <option value="Emergência">Emergência</option>
+    </select>
+
+    <label>Setor de encaminhamento *</label>
+    <select id="setor-recepcao" required>
+      <option value="">Selecione o setor</option>
+      <option value="Emergência">Emergência</option>
+      <option value="Consultas">Consultas</option>
+      <option value="Enfermagem">Enfermagem</option>
+      <option value="Internação">Internação</option>
+      <option value="Laboratório">Laboratório</option>
+      <option value="Farmácia">Farmácia</option>
+    </select>
+
+    <div class="form-actions">
+      <button type="submit" class="primary" id="registrar-atendimento">
+        REGISTRAR ATENDIMENTO
+      </button>
+    </div>
+
+    <p id="mensagem-recepcao" role="status"></p>
+  </form>
+</div>
+
+<div class="panel">
+  <h3>Histórico de atendimentos</h3>
+  <p id="mensagem-historico" class="muted">Carregando histórico...</p>
+  <div id="lista-atendimentos"></div>
+</div>`;
+}
+
+let pacientesRecepcao=[];
+
+function atualizarOpcoesPacientes(){
+  const busca=document.getElementById("busca-paciente-recepcao");
+  const select=document.getElementById("paciente-recepcao");
+
+  const termo=busca.value.trim().toLocaleLowerCase("pt-BR");
+
+  const selecionado=select.value;
+
+  select.replaceChildren();
+
+  const inicial=document.createElement("option");
+  inicial.value="";
+  inicial.textContent="Selecione o paciente";
+  select.appendChild(inicial);
+
+  const encontrados=pacientesRecepcao.filter(p=>
+    (p.full_name || "").toLocaleLowerCase("pt-BR").includes(termo)
+  );
+
+  encontrados.forEach(p=>{
+    const opcao=document.createElement("option");
+    opcao.value=p.id;
+    opcao.textContent=p.full_name;
+    select.appendChild(opcao);
+  });
+
+  if(encontrados.some(p=>p.id===selecionado)){
+    select.value=selecionado;
+  }
+
+  if(encontrados.length===0){
+    const opcao=document.createElement("option");
+    opcao.value="";
+    opcao.textContent="Nenhum paciente encontrado";
+    select.appendChild(opcao);
+  }
+}
+
+async function carregarPacientesRecepcao(){
+  const mensagem=document.getElementById("mensagem-recepcao");
+
+  mensagem.textContent="Carregando pacientes...";
+
+  try{
+    const {data,error}=await supabaseClient
+      .from("patients")
+      .select("id,full_name")
+      .order("full_name",{ascending:true});
+
+    if(error)throw error;
+
+    pacientesRecepcao=data || [];
+
+    atualizarOpcoesPacientes();
+
+    mensagem.textContent=pacientesRecepcao.length
+      ? "Selecione o paciente para registrar a chegada."
+      : "Nenhum paciente cadastrado. Cadastre o paciente primeiro.";
+
+    mensagem.className="muted";
+
+  }catch(erro){
+    mensagem.textContent="Erro ao carregar pacientes: "+erro.message;
+    mensagem.className="error";
+  }
+}
+
+async function carregarHistoricoAtendimentos(){
+  const mensagem=document.getElementById("mensagem-historico");
+  const lista=document.getElementById("lista-atendimentos");
+
+  mensagem.textContent="Carregando histórico...";
+  lista.replaceChildren();
+
+  try{
+    const {data,error}=await supabaseClient
+      .from("attendances")
+      .select("id,attendance_number,patient_id,complaint,destination_sector,priority,status,created_at")
+      .order("created_at",{ascending:false})
+      .limit(100);
+
+    if(error)throw error;
+
+    if(!data || data.length===0){
+      mensagem.textContent="Nenhum atendimento registrado.";
+      return;
+    }
+
+    mensagem.textContent=data.length+" atendimento(s) encontrado(s).";
+
+    data.forEach(atendimento=>{
+      const paciente=pacientesRecepcao.find(
+        p=>p.id===atendimento.patient_id
+      );
+
+      const item=document.createElement("div");
+      item.className="attendance-item";
+
+      const titulo=document.createElement("strong");
+      titulo.textContent="Atendimento nº "+atendimento.attendance_number;
+
+      const nome=document.createElement("p");
+      nome.textContent="Paciente: "+(paciente?.full_name || "Paciente não localizado");
+
+      const queixa=document.createElement("p");
+      queixa.textContent="Queixa: "+atendimento.complaint;
+
+      const setor=document.createElement("p");
+      setor.textContent="Setor: "+atendimento.destination_sector;
+
+      const prioridade=document.createElement("p");
+      prioridade.textContent="Prioridade: "+atendimento.priority;
+
+      const status=document.createElement("p");
+      status.textContent="Situação: "+atendimento.status;
+
+      const data=document.createElement("p");
+      data.className="muted";
+      data.textContent="Data: "+new Date(atendimento.created_at).toLocaleString("pt-BR");
+
+      item.append(titulo,nome,queixa,setor,prioridade,status,data);
+      lista.appendChild(item);
+    });
+
+  }catch(erro){
+    mensagem.textContent="Erro ao carregar histórico: "+erro.message;
+    mensagem.className="error";
+  }
+}
+
+function configurarFormularioRecepcao(){
+  const form=document.getElementById("form-recepcao");
+  const busca=document.getElementById("busca-paciente-recepcao");
+  const mensagem=document.getElementById("mensagem-recepcao");
+  const botao=document.getElementById("registrar-atendimento");
+
+  busca.addEventListener("input",atualizarOpcoesPacientes);
+
+  carregarPacientesRecepcao().then(()=>{
+    carregarHistoricoAtendimentos();
+  });
+
+  form.addEventListener("submit",async(event)=>{
+    event.preventDefault();
+
+    mensagem.textContent="";
+    mensagem.className="";
+
+    const patientId=document.getElementById("paciente-recepcao").value;
+    const complaint=document.getElementById("queixa-recepcao").value.trim();
+    const priority=document.getElementById("prioridade-recepcao").value;
+    const destinationSector=document.getElementById("setor-recepcao").value;
+
+    if(!patientId || !complaint || !destinationSector){
+      mensagem.textContent="Preencha todos os campos obrigatórios.";
+      mensagem.className="error";
+      return;
+    }
+
+    botao.disabled=true;
+    botao.textContent="REGISTRANDO...";
+
+    try{
+      const {data:usuarioData,error:usuarioErro}=
+        await supabaseClient.auth.getUser();
+
+      if(usuarioErro || !usuarioData.user){
+        throw new Error("Sessão encerrada. Faça login novamente.");
+      }
+
+      const novoAtendimento={
+        patient_id:patientId,
+        complaint:complaint,
+        priority:priority,
+        destination_sector:destinationSector,
+        status:"Aguardando",
+        created_by:usuarioData.user.id
+      };
+
+      const {error}=await supabaseClient
+        .from("attendances")
+        .insert([novoAtendimento]);
+
+      if(error)throw error;
+
+      mensagem.textContent="Atendimento registrado com sucesso!";
+      mensagem.className="success";
+
+      form.reset();
+      atualizarOpcoesPacientes();
+
+      await carregarHistoricoAtendimentos();
+
+    }catch(erro){
+      console.error(erro);
+      mensagem.textContent="Não foi possível registrar: "+erro.message;
+      mensagem.className="error";
+    }finally{
+      botao.disabled=false;
+      botao.textContent="REGISTRAR ATENDIMENTO";
+    }
+  });
+}
+
+/* NAVEGAÇÃO DOS MÓDULOS */
+
 function show(i){
   [...nav.children].forEach((b,j)=>{
     b.classList.toggle("active",i===j);
@@ -508,6 +780,8 @@ function show(i){
       '</div>';
   }else if(i===1){
     conteudo=formularioPacientes();
+  }else if(i===2){
+    conteudo=formularioRecepcao();
   }else{
     conteudo='<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>';
   }
@@ -520,6 +794,7 @@ function show(i){
     </div>`;
 
   if(i===1)configurarFormularioPaciente();
+  if(i===2)configurarFormularioRecepcao();
 }
 
 modules.forEach((m,i)=>{
@@ -530,6 +805,8 @@ modules.forEach((m,i)=>{
 });
 
 show(0);
+
+/* LOGIN DO ADMINISTRADOR */
 
 document.getElementById("entrar-hospital")
 .addEventListener("click",async()=>{
