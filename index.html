@@ -13,44 +13,47 @@ modules.forEach((m,i)=>{const b=document.createElement("button");b.textContent=m
     SUPABASE_ANON_KEY
   );
 </script><script>
-const loginBtn = document.getElementById('entrar-hospital');
+document.addEventListener('DOMContentLoaded', () => {
+  const loginBtn = document.getElementById('entrar-hospital');
 
-loginBtn.addEventListener('click', async () => {
-  const email = document.getElementById('email-login').value.trim();
-  const senha = document.getElementById('senha-login').value;
-  const mensagem = document.getElementById('mensagem-login');
+  loginBtn.addEventListener('click', async () => {
+    const email = document.getElementById('email-login').value.trim();
+    const senha = document.getElementById('senha-login').value;
+    const mensagem = document.getElementById('mensagem-login');
 
-  mensagem.textContent = 'Verificando acesso...';
-  loginBtn.disabled = true;
+    mensagem.textContent = 'Verificando acesso...';
+    loginBtn.disabled = true;
 
-  try {
-    const { data, error } =
-      await window.hospitalSupabase.auth.signInWithPassword({
-        email,
-        password: senha
-      });
+    try {
+      const { data, error } =
+        await window.hospitalSupabase.auth.signInWithPassword({
+          email,
+          password: senha
+        });
 
-    if (error) throw error;
+      if (error) throw error;
 
-    const { data: perfil, error: erroPerfil } =
-      await window.hospitalSupabase
-        .from('profiles')
-        .select('role, active')
-        .eq('id', data.user.id)
-        .single();
+      const { data: perfil, error: erroPerfil } =
+        await window.hospitalSupabase
+          .from('profiles')
+          .select('role, active')
+          .eq('id', data.user.id)
+          .single();
 
-    if (erroPerfil || perfil.role !== 'admin' || !perfil.active) {
-      await window.hospitalSupabase.auth.signOut();
-      throw new Error('Acesso restrito ao administrador.');
+      if (erroPerfil || perfil.role !== 'admin' || !perfil.active) {
+        await window.hospitalSupabase.auth.signOut();
+        throw new Error('Acesso restrito ao administrador.');
+      }
+
+      document.getElementById('login-hospital').remove();
+    } catch (erro) {
+      mensagem.textContent = erro.message;
+    } finally {
+      loginBtn.disabled = false;
     }
-
-    document.getElementById('login-hospital').remove();
-  } catch (erro) {
-    mensagem.textContent = erro.message;
-  } finally {
-    loginBtn.disabled = false;
-  }
+  });
 });
+</script>
 </script></body><div id="login-hospital" style="
 position:fixed;inset:0;background:#f1f5f9;
 z-index:9999;display:flex;align-items:center;
