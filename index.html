@@ -1,88 +1,152 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#123b63"><title>Hospital Municipal Antonio Tomaz</title><style>
-*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#172536;font:15px system-ui,Arial}header{background:#123b63;color:white;padding:20px;display:flex;gap:14px;align-items:center}.logo{font-size:32px;border:1px solid #ffffff88;border-radius:12px;padding:10px}h1{font-size:18px;margin:0 0 5px}header p{margin:0;color:#dbe8f2;font-size:13px}main{max-width:1100px;margin:auto;padding:16px}.warning{background:#fff4d6;padding:12px;border-radius:9px;margin-bottom:15px;font-size:13px}nav{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}button{border:0;border-radius:8px;padding:10px 13px;background:#e2ebf3;color:#123b63;font-weight:600}.active{background:#1f6396;color:white}.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}.card,.panel{background:white;border:1px solid #dce4ec;border-radius:12px;padding:16px}.panel{margin-top:14px}.card h3{margin:4px 0 8px;font-size:16px}.muted{color:#617286;font-size:13px}label{display:block;margin:10px 0 5px;color:#617286;font-size:13px}input{width:100%;padding:10px;border:1px solid #cbd6e1;border-radius:8px;font:inherit}@media(max-width:520px){header{padding:14px}main{padding:12px}}
-</style></head><body><header><div class="logo">🏥</div><div><h1>HOSPITAL MUNICIPAL ANTONIO TOMAZ</h1><p>Sistema Integrado de Gestão Hospitalar · Olho d'Água das Cunhãs – MA</p></div></header><main><div class="warning"><b>Protótipo demonstrativo.</b> Use somente informações fictícias. Esta versão não tem login seguro nem banco de dados e não deve ser usada para registrar pacientes reais.</div><nav id="nav"></nav><section id="view"></section><div class="panel muted">Projeto inicial · Os módulos serão implementados gradualmente com controle de acesso e proteção de dados conforme a LGPD.</div></main><script>
-const modules=[["Painel inicial","Visão geral demonstrativa do hospital."],["Pacientes","Cadastro administrativo — somente dados fictícios."],["Recepção","Chegada, identificação e encaminhamento."],["Emergência","Acolhimento e classificação conforme protocolo."],["Consultas","Agenda, atendimento e prontuário autorizado."],["Enfermagem","Registros de cuidados e evolução."],["Internação e leitos","Admissão, movimentação, ocupação e alta."],["Laboratório","Solicitação, coleta e resultados."],["Farmácia","Estoque, lote, validade e dispensação."],["Relatórios","Indicadores administrativos e assistenciais."],["Usuários e setores","Perfis, permissões e auditoria."]];
-const nav=document.getElementById("nav"),view=document.getElementById("view");
-function show(i){[...nav.children].forEach((b,j)=>b.classList.toggle("active",i===j));const [name,desc]=modules[i];view.innerHTML=`<div class="panel"><h2>${name}</h2><p class="muted">${desc}</p>${i===0?'<div class="cards">'+modules.slice(1).map(m=>`<div class="card"><h3>${m[0]}</h3><div class="muted">${m[1]}</div></div>`).join("")+'</div>':i===1?'<div class="card"><h3>Formulário de teste</h3><label>Nome fictício</label><input placeholder="Paciente de teste"><label>Data de nascimento</label><input type="date"><p class="muted">O formulário não salva informações.</p></div>':'<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>'}</div>`}
-modules.forEach((m,i)=>{const b=document.createElement("button");b.textContent=m[0];b.onclick=()=>show(i);nav.appendChild(b)});show(0);
-</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#123b63">
+<title>Hospital Municipal Antonio Tomaz</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f3f6fa;color:#172536;font:15px system-ui,Arial}
+header{background:#123b63;color:white;padding:20px;display:flex;gap:14px;align-items:center}
+.logo{font-size:32px;border:1px solid #ffffff88;border-radius:12px;padding:10px}
+h1{font-size:18px;margin:0 0 5px}
+header p{margin:0;color:#dbe8f2;font-size:13px}
+main{max-width:1100px;margin:auto;padding:16px}
+.warning{background:#fff4d6;padding:12px;border-radius:9px;margin-bottom:15px;font-size:13px}
+nav{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+button{border:0;border-radius:8px;padding:10px 13px;background:#e2ebf3;color:#123b63;font-weight:600}
+.active{background:#1f6396;color:white}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.card,.panel{background:white;border:1px solid #dce4ec;border-radius:12px;padding:16px}
+.panel{margin-top:14px}
+.card h3{margin:4px 0 8px;font-size:16px}
+.muted{color:#617286;font-size:13px}
+label{display:block;margin:10px 0 5px;color:#617286;font-size:13px}
+input{width:100%;padding:10px;border:1px solid #cbd6e1;border-radius:8px;font:inherit}
+#login-hospital{position:fixed;inset:0;background:#f1f5f9;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial}
+.login-box{background:white;padding:25px;border-radius:12px;width:100%;max-width:380px}
+.login-box button{width:100%;padding:13px;background:#1e3a8a;color:white;margin-top:12px}
+#mensagem-login{color:#b42318;font-size:13px}
+@media(max-width:520px){header{padding:14px}main{padding:12px}}
+</style>
+</head>
+<body>
+
+<div id="login-hospital">
+  <div class="login-box">
+    <h2 style="text-align:center;color:#1e3a8a">Hospital Municipal Antonio Tomaz</h2>
+    <h3 style="text-align:center">Acesso ao sistema</h3>
+    <input id="email-login" type="email" placeholder="E-mail do administrador">
+    <input id="senha-login" type="password" placeholder="Senha">
+    <button id="entrar-hospital">ENTRAR</button>
+    <p id="mensagem-login"></p>
+  </div>
+</div>
+
+<header>
+<div class="logo">🏥</div>
+<div>
+<h1>HOSPITAL MUNICIPAL ANTONIO TOMAZ</h1>
+<p>Sistema Integrado de Gestão Hospitalar · Olho d'Água das Cunhãs – MA</p>
+</div>
+</header>
+
+<main>
+<div class="warning">
+<b>Protótipo demonstrativo.</b>
+Use somente informações fictícias. Não registre pacientes reais nesta versão.
+</div>
+<nav id="nav"></nav>
+<section id="view"></section>
+<div class="panel muted">Projeto inicial · Módulos em desenvolvimento.</div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="./config.js"></script>
+
 <script>
-  window.hospitalSupabase = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_ANON_KEY
-  );
-</script><script>
-document.addEventListener('DOMContentLoaded', () => {
-  const loginBtn = document.getElementById('entrar-hospital');
+const modules=[
+["Painel inicial","Visão geral demonstrativa do hospital."],
+["Pacientes","Cadastro administrativo — somente dados fictícios."],
+["Recepção","Chegada, identificação e encaminhamento."],
+["Emergência","Acolhimento e classificação conforme protocolo."],
+["Consultas","Agenda, atendimento e prontuário autorizado."],
+["Enfermagem","Registros de cuidados e evolução."],
+["Internação e leitos","Admissão, movimentação, ocupação e alta."],
+["Laboratório","Solicitação, coleta e resultados."],
+["Farmácia","Estoque, lote, validade e dispensação."],
+["Relatórios","Indicadores administrativos e assistenciais."],
+["Usuários e setores","Perfis, permissões e auditoria."]
+];
 
-  loginBtn.addEventListener('click', async () => {
-    const email = document.getElementById('email-login').value.trim();
-    const senha = document.getElementById('senha-login').value;
-    const mensagem = document.getElementById('mensagem-login');
+const nav=document.getElementById("nav");
+const view=document.getElementById("view");
 
-    mensagem.textContent = 'Verificando acesso...';
-    loginBtn.disabled = true;
+function show(i){
+[...nav.children].forEach((b,j)=>b.classList.toggle("active",i===j));
+const [name,desc]=modules[i];
 
-    try {
-      const { data, error } =
-        await window.hospitalSupabase.auth.signInWithPassword({
-          email,
-          password: senha
-        });
+view.innerHTML=`<div class="panel">
+<h2>${name}</h2>
+<p class="muted">${desc}</p>
+${i===0?
+'<div class="cards">'+modules.slice(1).map(m=>`<div class="card"><h3>${m[0]}</h3><div class="muted">${m[1]}</div></div>`).join("")+'</div>':
+i===1?
+'<div class="card"><h3>Formulário de teste</h3><label>Nome fictício</label><input placeholder="Paciente de teste"><label>Data de nascimento</label><input type="date"><p class="muted">O formulário não salva informações.</p></div>':
+'<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>'}
+</div>`;
+}
 
-      if (error) throw error;
+modules.forEach((m,i)=>{
+const b=document.createElement("button");
+b.textContent=m[0];
+b.onclick=()=>show(i);
+nav.appendChild(b);
+});
+show(0);
 
-      const { data: perfil, error: erroPerfil } =
-        await window.hospitalSupabase
-          .from('profiles')
-          .select('role, active')
-          .eq('id', data.user.id)
-          .single();
+const supabaseClient=window.supabase.createClient(
+SUPABASE_URL,
+SUPABASE_ANON_KEY
+);
 
-      if (erroPerfil || perfil.role !== 'admin' || !perfil.active) {
-        await window.hospitalSupabase.auth.signOut();
-        throw new Error('Acesso restrito ao administrador.');
-      }
+document.getElementById("entrar-hospital").addEventListener("click",async()=>{
+const email=document.getElementById("email-login").value.trim();
+const senha=document.getElementById("senha-login").value;
+const mensagem=document.getElementById("mensagem-login");
+const botao=document.getElementById("entrar-hospital");
 
-      document.getElementById('login-hospital').remove();
-    } catch (erro) {
-      mensagem.textContent = erro.message;
-    } finally {
-      loginBtn.disabled = false;
-    }
-  });
+mensagem.textContent="Verificando acesso...";
+botao.disabled=true;
+
+try{
+const {data,error}=await supabaseClient.auth.signInWithPassword({
+email:email,
+password:senha
+});
+
+if(error)throw error;
+
+const {data:perfil,error:erroPerfil}=await supabaseClient
+.from("profiles")
+.select("role, active")
+.eq("id",data.user.id)
+.single();
+
+if(erroPerfil || !perfil || perfil.role!=="admin" || perfil.active!==true){
+await supabaseClient.auth.signOut();
+throw new Error("Acesso restrito ao administrador.");
+}
+
+document.getElementById("login-hospital").remove();
+
+}catch(erro){
+mensagem.textContent=erro.message;
+}finally{
+botao.disabled=false;
+}
 });
 </script>
-</script></body><div id="login-hospital" style="
-position:fixed;inset:0;background:#f1f5f9;
-z-index:9999;display:flex;align-items:center;
-justify-content:center;padding:20px;font-family:Arial">
-
-<div style="background:white;padding:25px;
-border-radius:12px;width:100%;max-width:380px">
-
-<h2 style="text-align:center;color:#1e3a8a">
-Hospital Municipal Antonio Tomaz
-</h2>
-
-<h3 style="text-align:center">Acesso ao sistema</h3>
-
-<input id="email-login" type="email"
-placeholder="E-mail do administrador"
-style="width:100%;padding:12px;margin:8px 0;box-sizing:border-box">
-
-<input id="senha-login" type="password"
-placeholder="Senha"
-style="width:100%;padding:12px;margin:8px 0;box-sizing:border-box">
-
-<button id="entrar-hospital"
-style="width:100%;padding:13px;background:#1e3a8a;
-color:white;border:0;border-radius:6px">
-ENTRAR
-</button>
-
-<p id="mensagem-login"></p>
-
-</div>
-</div></html>
+</body>
+</html>
