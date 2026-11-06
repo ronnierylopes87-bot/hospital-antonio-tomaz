@@ -5,4 +5,11 @@ const modules=[["Painel inicial","Visão geral demonstrativa do hospital."],["Pa
 const nav=document.getElementById("nav"),view=document.getElementById("view");
 function show(i){[...nav.children].forEach((b,j)=>b.classList.toggle("active",i===j));const [name,desc]=modules[i];view.innerHTML=`<div class="panel"><h2>${name}</h2><p class="muted">${desc}</p>${i===0?'<div class="cards">'+modules.slice(1).map(m=>`<div class="card"><h3>${m[0]}</h3><div class="muted">${m[1]}</div></div>`).join("")+'</div>':i===1?'<div class="card"><h3>Formulário de teste</h3><label>Nome fictício</label><input placeholder="Paciente de teste"><label>Data de nascimento</label><input type="date"><p class="muted">O formulário não salva informações.</p></div>':'<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>'}</div>`}
 modules.forEach((m,i)=>{const b=document.createElement("button");b.textContent=m[0];b.onclick=()=>show(i);nav.appendChild(b)});show(0);
+</script><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./config.js"></script>
+<script>
+  window.hospitalSupabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
 </script></body></html>
