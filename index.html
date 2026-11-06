@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -5,6 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#123b63">
 <title>Hospital Municipal Antonio Tomaz</title>
+
 <style>
 *{box-sizing:border-box}
 body{margin:0;background:#f3f6fa;color:#172536;font:15px system-ui,Arial}
@@ -15,7 +17,8 @@ header p{margin:0;color:#dbe8f2;font-size:13px}
 main{max-width:1100px;margin:auto;padding:16px}
 .warning{background:#fff4d6;padding:12px;border-radius:9px;margin-bottom:15px;font-size:13px}
 nav{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
-button{border:0;border-radius:8px;padding:10px 13px;background:#e2ebf3;color:#123b63;font-weight:600}
+button{border:0;border-radius:8px;padding:10px 13px;background:#e2ebf3;color:#123b63;font-weight:600;cursor:pointer}
+button:disabled{opacity:.6;cursor:wait}
 .active{background:#1f6396;color:white}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
 .card,.panel{background:white;border:1px solid #dce4ec;border-radius:12px;padding:16px}
@@ -23,7 +26,14 @@ button{border:0;border-radius:8px;padding:10px 13px;background:#e2ebf3;color:#12
 .card h3{margin:4px 0 8px;font-size:16px}
 .muted{color:#617286;font-size:13px}
 label{display:block;margin:10px 0 5px;color:#617286;font-size:13px}
-input{width:100%;padding:10px;border:1px solid #cbd6e1;border-radius:8px;font:inherit}
+input,select{width:100%;padding:11px;border:1px solid #cbd6e1;border-radius:8px;font:inherit;background:white}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.form-grid>div{min-width:0}
+.form-actions{margin-top:18px}
+.form-actions button{background:#123b63;color:white;width:100%;padding:13px}
+#mensagem-paciente{margin-top:12px;font-weight:600}
+.success{color:#167044}
+.error{color:#b42318}
 #login-hospital{position:fixed;inset:0;background:#f1f5f9;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial}
 .login-box{background:white;padding:25px;border-radius:12px;width:100%;max-width:380px}
 .login-box button{width:100%;padding:13px;background:#1e3a8a;color:white;margin-top:12px}
@@ -31,6 +41,7 @@ input{width:100%;padding:10px;border:1px solid #cbd6e1;border-radius:8px;font:in
 @media(max-width:520px){header{padding:14px}main{padding:12px}}
 </style>
 </head>
+
 <body>
 
 <div id="login-hospital">
@@ -45,21 +56,21 @@ input{width:100%;padding:10px;border:1px solid #cbd6e1;border-radius:8px;font:in
 </div>
 
 <header>
-<div class="logo">🏥</div>
-<div>
-<h1>HOSPITAL MUNICIPAL ANTONIO TOMAZ</h1>
-<p>Sistema Integrado de Gestão Hospitalar · Olho d'Água das Cunhãs – MA</p>
-</div>
+  <div class="logo">🏥</div>
+  <div>
+    <h1>HOSPITAL MUNICIPAL ANTONIO TOMAZ</h1>
+    <p>Sistema Integrado de Gestão Hospitalar · Olho d'Água das Cunhãs – MA</p>
+  </div>
 </header>
 
 <main>
-<div class="warning">
-<b>Protótipo demonstrativo.</b>
-Use somente informações fictícias. Não registre pacientes reais nesta versão.
-</div>
-<nav id="nav"></nav>
-<section id="view"></section>
-<div class="panel muted">Projeto inicial · Módulos em desenvolvimento.</div>
+  <div class="warning">
+    <b>Ambiente de testes.</b>
+    Utilize exclusivamente dados fictícios. Não registre pacientes reais nesta versão.
+  </div>
+  <nav id="nav"></nav>
+  <section id="view"></section>
+  <div class="panel muted">Projeto inicial · Módulos em desenvolvimento.</div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -68,7 +79,7 @@ Use somente informações fictícias. Não registre pacientes reais nesta versã
 <script>
 const modules=[
 ["Painel inicial","Visão geral demonstrativa do hospital."],
-["Pacientes","Cadastro administrativo — somente dados fictícios."],
+["Pacientes","Cadastro administrativo de pacientes."],
 ["Recepção","Chegada, identificação e encaminhamento."],
 ["Emergência","Acolhimento e classificação conforme protocolo."],
 ["Consultas","Agenda, atendimento e prontuário autorizado."],
@@ -83,69 +94,275 @@ const modules=[
 const nav=document.getElementById("nav");
 const view=document.getElementById("view");
 
-function show(i){
-[...nav.children].forEach((b,j)=>b.classList.toggle("active",i===j));
-const [name,desc]=modules[i];
+const supabaseClient=window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
 
-view.innerHTML=`<div class="panel">
-<h2>${name}</h2>
-<p class="muted">${desc}</p>
-${i===0?
-'<div class="cards">'+modules.slice(1).map(m=>`<div class="card"><h3>${m[0]}</h3><div class="muted">${m[1]}</div></div>`).join("")+'</div>':
-i===1?
-'<div class="card"><h3>Formulário de teste</h3><label>Nome fictício</label><input placeholder="Paciente de teste"><label>Data de nascimento</label><input type="date"><p class="muted">O formulário não salva informações.</p></div>':
-'<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>'}
-</div>`;
+function calcularIdade(data){
+  if(!data)return "";
+  const nascimento=new Date(data+"T00:00:00");
+  const hoje=new Date();
+
+  if(Number.isNaN(nascimento.getTime()) || nascimento>hoje)return "";
+
+  let idade=hoje.getFullYear()-nascimento.getFullYear();
+
+  const aniversarioJaPassou=
+    hoje.getMonth()>nascimento.getMonth() ||
+    (hoje.getMonth()===nascimento.getMonth() &&
+     hoje.getDate()>=nascimento.getDate());
+
+  if(!aniversarioJaPassou)idade--;
+
+  return idade;
+}
+
+function formularioPacientes(){
+  return `
+  <div class="card">
+    <h3>Cadastro de pacientes</h3>
+    <p class="muted">Preencha os dados fictícios para testar o cadastro.</p>
+
+    <form id="form-paciente">
+
+      <div class="form-grid">
+
+        <div>
+          <label>Nome completo *</label>
+          <input name="full_name" maxlength="150" required>
+        </div>
+
+        <div>
+          <label>Data de nascimento *</label>
+          <input name="birth_date" id="birth-date" type="date" required>
+        </div>
+
+        <div>
+          <label>Idade</label>
+          <input id="idade-paciente" readonly placeholder="Calculada automaticamente">
+        </div>
+
+        <div>
+          <label>CPF</label>
+          <input name="cpf" maxlength="14" placeholder="000.000.000-00">
+        </div>
+
+        <div>
+          <label>Cartão SUS</label>
+          <input name="sus_card" maxlength="20">
+        </div>
+
+        <div>
+          <label>Sexo</label>
+          <select name="sex">
+            <option value="">Selecione</option>
+            <option value="Feminino">Feminino</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Não informado">Não informado</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Cor/raça</label>
+          <select name="race">
+            <option value="">Selecione</option>
+            <option value="Branca">Branca</option>
+            <option value="Preta">Preta</option>
+            <option value="Parda">Parda</option>
+            <option value="Amarela">Amarela</option>
+            <option value="Indígena">Indígena</option>
+            <option value="Não informada">Não informada</option>
+          </select>
+        </div>
+
+        <div>
+          <label>Telefone</label>
+          <input name="phone" type="tel" maxlength="20">
+        </div>
+
+        <div>
+          <label>Naturalidade</label>
+          <input name="birthplace" maxlength="120">
+        </div>
+
+        <div>
+          <label>Nome da mãe</label>
+          <input name="mother_name" maxlength="150">
+        </div>
+
+        <div>
+          <label>Nome do pai</label>
+          <input name="father_name" maxlength="150">
+        </div>
+
+        <div>
+          <label>Endereço</label>
+          <input name="address" maxlength="250">
+        </div>
+
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" id="salvar-paciente">SALVAR PACIENTE</button>
+      </div>
+
+      <p id="mensagem-paciente" role="status"></p>
+
+    </form>
+  </div>`;
+}
+
+function show(i){
+  [...nav.children].forEach((b,j)=>{
+    b.classList.toggle("active",i===j);
+  });
+
+  const [name,desc]=modules[i];
+
+  let conteudo="";
+
+  if(i===0){
+    conteudo='<div class="cards">'+
+      modules.slice(1).map(m=>
+        `<div class="card"><h3>${m[0]}</h3><div class="muted">${m[1]}</div></div>`
+      ).join("")+
+      '</div>';
+  }else if(i===1){
+    conteudo=formularioPacientes();
+  }else{
+    conteudo='<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>';
+  }
+
+  view.innerHTML=`
+    <div class="panel">
+      <h2>${name}</h2>
+      <p class="muted">${desc}</p>
+      ${conteudo}
+    </div>`;
+
+  if(i===1)configurarFormularioPaciente();
 }
 
 modules.forEach((m,i)=>{
-const b=document.createElement("button");
-b.textContent=m[0];
-b.onclick=()=>show(i);
-nav.appendChild(b);
+  const b=document.createElement("button");
+  b.textContent=m[0];
+  b.onclick=()=>show(i);
+  nav.appendChild(b);
 });
+
 show(0);
 
-const supabaseClient=window.supabase.createClient(
-SUPABASE_URL,
-SUPABASE_ANON_KEY
-);
+function configurarFormularioPaciente(){
 
-document.getElementById("entrar-hospital").addEventListener("click",async()=>{
-const email=document.getElementById("email-login").value.trim();
-const senha=document.getElementById("senha-login").value;
-const mensagem=document.getElementById("mensagem-login");
-const botao=document.getElementById("entrar-hospital");
+  const form=document.getElementById("form-paciente");
+  const nascimento=document.getElementById("birth-date");
+  const idade=document.getElementById("idade-paciente");
+  const mensagem=document.getElementById("mensagem-paciente");
+  const botao=document.getElementById("salvar-paciente");
 
-mensagem.textContent="Verificando acesso...";
-botao.disabled=true;
+  nascimento.addEventListener("change",()=>{
+    idade.value=calcularIdade(nascimento.value);
+  });
 
-try{
-const {data,error}=await supabaseClient.auth.signInWithPassword({
-email:email,
-password:senha
-});
+  form.addEventListener("submit",async(event)=>{
+    event.preventDefault();
 
-if(error)throw error;
+    mensagem.textContent="";
+    mensagem.className="";
 
-const {data:perfil,error:erroPerfil}=await supabaseClient
-.from("profiles")
-.select("role, active")
-.eq("id",data.user.id)
-.single();
+    const dados=new FormData(form);
+    const dataNascimento=dados.get("birth_date");
 
-if(erroPerfil || !perfil || perfil.role!=="admin" || perfil.active!==true){
-await supabaseClient.auth.signOut();
-throw new Error("Acesso restrito ao administrador.");
+    if(!calcularIdade(dataNascimento) && calcularIdade(dataNascimento)!==0){
+      mensagem.textContent="Informe uma data de nascimento válida.";
+      mensagem.className="error";
+      return;
+    }
+
+    botao.disabled=true;
+    botao.textContent="SALVANDO...";
+
+    const paciente={
+      full_name:dados.get("full_name").trim(),
+      birth_date:dataNascimento,
+      cpf:dados.get("cpf").trim() || null,
+      sus_card:dados.get("sus_card").trim() || null,
+      sex:dados.get("sex") || null,
+      race:dados.get("race") || null,
+      phone:dados.get("phone").trim() || null,
+      birthplace:dados.get("birthplace").trim() || null,
+      mother_name:dados.get("mother_name").trim() || null,
+      father_name:dados.get("father_name").trim() || null,
+      address:dados.get("address").trim() || null
+    };
+
+    try{
+      const {data:usuarioData,error:usuarioErro}=
+        await supabaseClient.auth.getUser();
+
+      if(usuarioErro || !usuarioData.user){
+        throw new Error("Sessão encerrada. Faça login novamente.");
+      }
+
+      const {error}=await supabaseClient
+        .from("patients")
+        .insert([paciente]);
+
+      if(error)throw error;
+
+      mensagem.textContent="Cadastro de teste salvo com sucesso!";
+      mensagem.className="success";
+      form.reset();
+      idade.value="";
+
+    }catch(erro){
+      console.error(erro);
+      mensagem.textContent="Não foi possível salvar: "+erro.message;
+      mensagem.className="error";
+    }finally{
+      botao.disabled=false;
+      botao.textContent="SALVAR PACIENTE";
+    }
+  });
 }
 
-document.getElementById("login-hospital").remove();
+document.getElementById("entrar-hospital")
+.addEventListener("click",async()=>{
+  const email=document.getElementById("email-login").value.trim();
+  const senha=document.getElementById("senha-login").value;
+  const mensagem=document.getElementById("mensagem-login");
+  const botao=document.getElementById("entrar-hospital");
 
-}catch(erro){
-mensagem.textContent=erro.message;
-}finally{
-botao.disabled=false;
-}
+  mensagem.textContent="Verificando acesso...";
+  botao.disabled=true;
+
+  try{
+    const {data,error}=await supabaseClient.auth.signInWithPassword({
+      email:email,
+      password:senha
+    });
+
+    if(error)throw error;
+
+    const {data:perfil,error:erroPerfil}=await supabaseClient
+      .from("profiles")
+      .select("role, active")
+      .eq("id",data.user.id)
+      .single();
+
+    if(erroPerfil || !perfil || perfil.role!=="admin" || perfil.active!==true){
+      await supabaseClient.auth.signOut();
+      throw new Error("Acesso restrito ao administrador.");
+    }
+
+    document.getElementById("login-hospital").remove();
+
+  }catch(erro){
+    mensagem.textContent=erro.message;
+  }finally{
+    botao.disabled=false;
+  }
 });
 </script>
 </body>
