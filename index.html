@@ -18,7 +18,7 @@ main{max-width:1100px;margin:auto;padding:16px}
 .warning{background:#fff4d6;padding:12px;border-radius:9px;margin-bottom:15px;font-size:13px}
 nav{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
 button{border:0;border-radius:8px;padding:10px 13px;background:#e2ebf3;color:#123b63;font-weight:600;cursor:pointer}
-button:disabled{opacity:.6;cursor:wait}
+button:disabled{opacity:.6}
 .active{background:#1f6396;color:white}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
 .card,.panel{background:white;border:1px solid #dce4ec;border-radius:12px;padding:16px}
@@ -28,12 +28,15 @@ button:disabled{opacity:.6;cursor:wait}
 label{display:block;margin:10px 0 5px;color:#617286;font-size:13px}
 input,select{width:100%;padding:11px;border:1px solid #cbd6e1;border-radius:8px;font:inherit;background:white}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-.form-grid>div{min-width:0}
-.form-actions{margin-top:18px}
-.form-actions button{background:#123b63;color:white;width:100%;padding:13px}
-#mensagem-paciente{margin-top:12px;font-weight:600}
+.form-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.primary{background:#123b63;color:white}
 .success{color:#167044}
 .error{color:#b42318}
+.patient-item{border:1px solid #dce4ec;border-radius:9px;padding:12px;margin-top:9px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.patient-item button{background:#e2ebf3}
+.details-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.detail{padding:10px;background:#f3f6fa;border-radius:8px;overflow-wrap:anywhere}
+.detail b{display:block;font-size:12px;color:#617286;margin-bottom:4px}
 #login-hospital{position:fixed;inset:0;background:#f1f5f9;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial}
 .login-box{background:white;padding:25px;border-radius:12px;width:100%;max-width:380px}
 .login-box button{width:100%;padding:13px;background:#1e3a8a;color:white;margin-top:12px}
@@ -79,7 +82,7 @@ input,select{width:100%;padding:11px;border:1px solid #cbd6e1;border-radius:8px;
 <script>
 const modules=[
 ["Painel inicial","Visão geral demonstrativa do hospital."],
-["Pacientes","Cadastro administrativo de pacientes."],
+["Pacientes","Cadastro, consulta, pesquisa e edição."],
 ["Recepção","Chegada, identificação e encaminhamento."],
 ["Emergência","Acolhimento e classificação conforme protocolo."],
 ["Consultas","Agenda, atendimento e prontuário autorizado."],
@@ -99,6 +102,8 @@ const supabaseClient=window.supabase.createClient(
   SUPABASE_ANON_KEY
 );
 
+let pacientes=[];
+
 function calcularIdade(data){
   if(!data)return "";
   const nascimento=new Date(data+"T00:00:00");
@@ -108,109 +113,383 @@ function calcularIdade(data){
 
   let idade=hoje.getFullYear()-nascimento.getFullYear();
 
-  const aniversarioJaPassou=
-    hoje.getMonth()>nascimento.getMonth() ||
+  if(
+    hoje.getMonth()<nascimento.getMonth() ||
     (hoje.getMonth()===nascimento.getMonth() &&
-     hoje.getDate()>=nascimento.getDate());
-
-  if(!aniversarioJaPassou)idade--;
+     hoje.getDate()<nascimento.getDate())
+  )idade--;
 
   return idade;
 }
 
 function formularioPacientes(){
-  return `
-  <div class="card">
-    <h3>Cadastro de pacientes</h3>
-    <p class="muted">Preencha os dados fictícios para testar o cadastro.</p>
+return `
+<div class="card">
+  <h3 id="titulo-formulario">Cadastro de pacientes</h3>
+  <p class="muted">Preencha os dados fictícios do paciente.</p>
 
-    <form id="form-paciente">
+  <form id="form-paciente">
+    <input type="hidden" name="id" id="paciente-id">
 
-      <div class="form-grid">
-
-        <div>
-          <label>Nome completo *</label>
-          <input name="full_name" maxlength="150" required>
-        </div>
-
-        <div>
-          <label>Data de nascimento *</label>
-          <input name="birth_date" id="birth-date" type="date" required>
-        </div>
-
-        <div>
-          <label>Idade</label>
-          <input id="idade-paciente" readonly placeholder="Calculada automaticamente">
-        </div>
-
-        <div>
-          <label>CPF</label>
-          <input name="cpf" maxlength="14" placeholder="000.000.000-00">
-        </div>
-
-        <div>
-          <label>Cartão SUS</label>
-          <input name="sus_card" maxlength="20">
-        </div>
-
-        <div>
-          <label>Sexo</label>
-          <select name="sex">
-            <option value="">Selecione</option>
-            <option value="Feminino">Feminino</option>
-            <option value="Masculino">Masculino</option>
-            <option value="Não informado">Não informado</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Cor/raça</label>
-          <select name="race">
-            <option value="">Selecione</option>
-            <option value="Branca">Branca</option>
-            <option value="Preta">Preta</option>
-            <option value="Parda">Parda</option>
-            <option value="Amarela">Amarela</option>
-            <option value="Indígena">Indígena</option>
-            <option value="Não informada">Não informada</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Telefone</label>
-          <input name="phone" type="tel" maxlength="20">
-        </div>
-
-        <div>
-          <label>Naturalidade</label>
-          <input name="birthplace" maxlength="120">
-        </div>
-
-        <div>
-          <label>Nome da mãe</label>
-          <input name="mother_name" maxlength="150">
-        </div>
-
-        <div>
-          <label>Nome do pai</label>
-          <input name="father_name" maxlength="150">
-        </div>
-
-        <div>
-          <label>Endereço</label>
-          <input name="address" maxlength="250">
-        </div>
-
+    <div class="form-grid">
+      <div>
+        <label>Nome completo *</label>
+        <input name="full_name" maxlength="150" required>
       </div>
 
-      <div class="form-actions">
-        <button type="submit" id="salvar-paciente">SALVAR PACIENTE</button>
+      <div>
+        <label>Data de nascimento *</label>
+        <input name="birth_date" id="birth-date" type="date" required>
       </div>
 
-      <p id="mensagem-paciente" role="status"></p>
+      <div>
+        <label>Idade</label>
+        <input id="idade-paciente" readonly placeholder="Calculada automaticamente">
+      </div>
 
-    </form>
-  </div>`;
+      <div>
+        <label>CPF</label>
+        <input name="cpf" maxlength="14">
+      </div>
+
+      <div>
+        <label>Cartão SUS</label>
+        <input name="sus_card" maxlength="20">
+      </div>
+
+      <div>
+        <label>Sexo</label>
+        <select name="sex">
+          <option value="">Selecione</option>
+          <option value="Feminino">Feminino</option>
+          <option value="Masculino">Masculino</option>
+          <option value="Não informado">Não informado</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Cor/raça</label>
+        <select name="race">
+          <option value="">Selecione</option>
+          <option value="Branca">Branca</option>
+          <option value="Preta">Preta</option>
+          <option value="Parda">Parda</option>
+          <option value="Amarela">Amarela</option>
+          <option value="Indígena">Indígena</option>
+          <option value="Não informada">Não informada</option>
+        </select>
+      </div>
+
+      <div>
+        <label>Telefone</label>
+        <input name="phone" type="tel" maxlength="20">
+      </div>
+
+      <div>
+        <label>Naturalidade</label>
+        <input name="birthplace" maxlength="120">
+      </div>
+
+      <div>
+        <label>Nome da mãe</label>
+        <input name="mother_name" maxlength="150">
+      </div>
+
+      <div>
+        <label>Nome do pai</label>
+        <input name="father_name" maxlength="150">
+      </div>
+
+      <div>
+        <label>Endereço</label>
+        <input name="address" maxlength="250">
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="primary" id="salvar-paciente">SALVAR PACIENTE</button>
+      <button type="button" id="novo-paciente">NOVO CADASTRO</button>
+    </div>
+
+    <p id="mensagem-paciente" role="status"></p>
+  </form>
+</div>
+
+<div class="panel">
+  <h3>Pacientes cadastrados</h3>
+  <label>Pesquisar pelo nome</label>
+  <input id="pesquisa-paciente" type="search" placeholder="Digite o nome do paciente">
+  <p id="mensagem-lista" class="muted">Carregando pacientes...</p>
+  <div id="lista-pacientes"></div>
+</div>
+
+<div class="panel" id="area-detalhes" hidden>
+  <h3>Dados do paciente</h3>
+  <div id="detalhes-paciente" class="details-grid"></div>
+</div>`;
+}
+
+function mostrarDetalhes(p){
+  const area=document.getElementById("area-detalhes");
+  const destino=document.getElementById("detalhes-paciente");
+
+  destino.replaceChildren();
+
+  const campos=[
+    ["Nome completo",p.full_name],
+    ["Data de nascimento",p.birth_date],
+    ["Idade",calcularIdade(p.birth_date)+" anos"],
+    ["CPF",p.cpf],
+    ["Cartão SUS",p.sus_card],
+    ["Sexo",p.sex],
+    ["Cor/raça",p.race],
+    ["Telefone",p.phone],
+    ["Naturalidade",p.birthplace],
+    ["Nome da mãe",p.mother_name],
+    ["Nome do pai",p.father_name],
+    ["Endereço",p.address]
+  ];
+
+  campos.forEach(([titulo,valor])=>{
+    const div=document.createElement("div");
+    div.className="detail";
+
+    const b=document.createElement("b");
+    b.textContent=titulo;
+
+    const span=document.createElement("span");
+    span.textContent=valor || "Não informado";
+
+    div.append(b,span);
+    destino.appendChild(div);
+  });
+
+  area.hidden=false;
+}
+
+function preencherEdicao(p){
+  const form=document.getElementById("form-paciente");
+
+  form.elements.id.value=p.id;
+  form.elements.full_name.value=p.full_name || "";
+  form.elements.birth_date.value=p.birth_date || "";
+  form.elements.cpf.value=p.cpf || "";
+  form.elements.sus_card.value=p.sus_card || "";
+  form.elements.sex.value=p.sex || "";
+  form.elements.race.value=p.race || "";
+  form.elements.phone.value=p.phone || "";
+  form.elements.birthplace.value=p.birthplace || "";
+  form.elements.mother_name.value=p.mother_name || "";
+  form.elements.father_name.value=p.father_name || "";
+  form.elements.address.value=p.address || "";
+
+  document.getElementById("idade-paciente").value=
+    calcularIdade(p.birth_date);
+
+  document.getElementById("titulo-formulario").textContent=
+    "Editar cadastro de paciente";
+
+  document.getElementById("salvar-paciente").textContent=
+    "ATUALIZAR CADASTRO";
+
+  document.getElementById("mensagem-paciente").textContent=
+    "Editando cadastro selecionado.";
+
+  document.getElementById("mensagem-paciente").className="";
+
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function carregarPacientes(){
+  const mensagem=document.getElementById("mensagem-lista");
+  const lista=document.getElementById("lista-pacientes");
+
+  mensagem.textContent="Carregando pacientes...";
+  lista.replaceChildren();
+
+  try{
+    const {data,error}=await supabaseClient
+      .from("patients")
+      .select("id,full_name,birth_date,cpf,sus_card,sex,race,phone,birthplace,mother_name,father_name,address,created_at")
+      .order("created_at",{ascending:false});
+
+    if(error)throw error;
+
+    pacientes=data || [];
+    renderizarLista();
+
+  }catch(erro){
+    mensagem.textContent="Erro ao carregar: "+erro.message;
+    mensagem.className="error";
+  }
+}
+
+function renderizarLista(){
+  const pesquisa=document.getElementById("pesquisa-paciente");
+  const mensagem=document.getElementById("mensagem-lista");
+  const lista=document.getElementById("lista-pacientes");
+
+  const termo=pesquisa.value.trim().toLocaleLowerCase("pt-BR");
+
+  const encontrados=pacientes.filter(p=>
+    (p.full_name || "").toLocaleLowerCase("pt-BR").includes(termo)
+  );
+
+  lista.replaceChildren();
+
+  mensagem.className="muted";
+
+  if(encontrados.length===0){
+    mensagem.textContent="Nenhum paciente encontrado.";
+    return;
+  }
+
+  mensagem.textContent=encontrados.length+" paciente(s) encontrado(s).";
+
+  encontrados.forEach(p=>{
+    const item=document.createElement("div");
+    item.className="patient-item";
+
+    const info=document.createElement("div");
+    const nome=document.createElement("strong");
+    nome.textContent=p.full_name;
+
+    const data=document.createElement("div");
+    data.className="muted";
+    data.textContent="Nascimento: "+(p.birth_date || "Não informado");
+
+    info.append(nome,data);
+
+    const acoes=document.createElement("div");
+
+    const consultar=document.createElement("button");
+    consultar.textContent="CONSULTAR";
+    consultar.onclick=()=>mostrarDetalhes(p);
+
+    const editar=document.createElement("button");
+    editar.textContent="EDITAR";
+    editar.onclick=()=>preencherEdicao(p);
+
+    acoes.append(consultar,editar);
+    item.append(info,acoes);
+    lista.appendChild(item);
+  });
+}
+
+function configurarFormularioPaciente(){
+  const form=document.getElementById("form-paciente");
+  const nascimento=document.getElementById("birth-date");
+  const idade=document.getElementById("idade-paciente");
+  const mensagem=document.getElementById("mensagem-paciente");
+  const botao=document.getElementById("salvar-paciente");
+
+  nascimento.addEventListener("change",()=>{
+    const valor=calcularIdade(nascimento.value);
+    idade.value=valor===""?"":valor+" anos";
+  });
+
+  document.getElementById("pesquisa-paciente")
+    .addEventListener("input",renderizarLista);
+
+  document.getElementById("novo-paciente").addEventListener("click",()=>{
+    form.reset();
+    idade.value="";
+    mensagem.textContent="";
+    mensagem.className="";
+    document.getElementById("paciente-id").value="";
+    document.getElementById("titulo-formulario").textContent="Cadastro de pacientes";
+    botao.textContent="SALVAR PACIENTE";
+    document.getElementById("area-detalhes").hidden=true;
+  });
+
+  form.addEventListener("submit",async(event)=>{
+    event.preventDefault();
+
+    mensagem.textContent="";
+    mensagem.className="";
+
+    const dados=new FormData(form);
+    const dataNascimento=dados.get("birth_date");
+    const idadeCalculada=calcularIdade(dataNascimento);
+
+    if(idadeCalculada==="" ){
+      mensagem.textContent="Informe uma data de nascimento válida.";
+      mensagem.className="error";
+      return;
+    }
+
+    const id=dados.get("id");
+
+    const paciente={
+      full_name:dados.get("full_name").trim(),
+      birth_date:dataNascimento,
+      cpf:dados.get("cpf").trim() || null,
+      sus_card:dados.get("sus_card").trim() || null,
+      sex:dados.get("sex") || null,
+      race:dados.get("race") || null,
+      phone:dados.get("phone").trim() || null,
+      birthplace:dados.get("birthplace").trim() || null,
+      mother_name:dados.get("mother_name").trim() || null,
+      father_name:dados.get("father_name").trim() || null,
+      address:dados.get("address").trim() || null
+    };
+
+    botao.disabled=true;
+    botao.textContent="SALVANDO...";
+
+    try{
+      const {data:usuarioData,error:usuarioErro}=
+        await supabaseClient.auth.getUser();
+
+      if(usuarioErro || !usuarioData.user){
+        throw new Error("Sessão encerrada. Faça login novamente.");
+      }
+
+      let erro;
+
+      if(id){
+        const resultado=await supabaseClient
+          .from("patients")
+          .update(paciente)
+          .eq("id",id);
+
+        erro=resultado.error;
+      }else{
+        const resultado=await supabaseClient
+          .from("patients")
+          .insert([paciente]);
+
+        erro=resultado.error;
+      }
+
+      if(erro)throw erro;
+
+      mensagem.textContent=id
+        ?"Cadastro atualizado com sucesso!"
+        :"Paciente cadastrado com sucesso!";
+
+      mensagem.className="success";
+
+      form.reset();
+      idade.value="";
+      document.getElementById("paciente-id").value="";
+      document.getElementById("titulo-formulario").textContent="Cadastro de pacientes";
+      botao.textContent="SALVAR PACIENTE";
+      document.getElementById("area-detalhes").hidden=true;
+
+      await carregarPacientes();
+
+    }catch(erro){
+      console.error(erro);
+      mensagem.textContent="Não foi possível salvar: "+erro.message;
+      mensagem.className="error";
+    }finally{
+      botao.disabled=false;
+      botao.textContent="SALVAR PACIENTE";
+    }
+  });
+
+  carregarPacientes();
 }
 
 function show(i){
@@ -219,7 +498,6 @@ function show(i){
   });
 
   const [name,desc]=modules[i];
-
   let conteudo="";
 
   if(i===0){
@@ -252,80 +530,6 @@ modules.forEach((m,i)=>{
 });
 
 show(0);
-
-function configurarFormularioPaciente(){
-
-  const form=document.getElementById("form-paciente");
-  const nascimento=document.getElementById("birth-date");
-  const idade=document.getElementById("idade-paciente");
-  const mensagem=document.getElementById("mensagem-paciente");
-  const botao=document.getElementById("salvar-paciente");
-
-  nascimento.addEventListener("change",()=>{
-    idade.value=calcularIdade(nascimento.value);
-  });
-
-  form.addEventListener("submit",async(event)=>{
-    event.preventDefault();
-
-    mensagem.textContent="";
-    mensagem.className="";
-
-    const dados=new FormData(form);
-    const dataNascimento=dados.get("birth_date");
-
-    if(!calcularIdade(dataNascimento) && calcularIdade(dataNascimento)!==0){
-      mensagem.textContent="Informe uma data de nascimento válida.";
-      mensagem.className="error";
-      return;
-    }
-
-    botao.disabled=true;
-    botao.textContent="SALVANDO...";
-
-    const paciente={
-      full_name:dados.get("full_name").trim(),
-      birth_date:dataNascimento,
-      cpf:dados.get("cpf").trim() || null,
-      sus_card:dados.get("sus_card").trim() || null,
-      sex:dados.get("sex") || null,
-      race:dados.get("race") || null,
-      phone:dados.get("phone").trim() || null,
-      birthplace:dados.get("birthplace").trim() || null,
-      mother_name:dados.get("mother_name").trim() || null,
-      father_name:dados.get("father_name").trim() || null,
-      address:dados.get("address").trim() || null
-    };
-
-    try{
-      const {data:usuarioData,error:usuarioErro}=
-        await supabaseClient.auth.getUser();
-
-      if(usuarioErro || !usuarioData.user){
-        throw new Error("Sessão encerrada. Faça login novamente.");
-      }
-
-      const {error}=await supabaseClient
-        .from("patients")
-        .insert([paciente]);
-
-      if(error)throw error;
-
-      mensagem.textContent="Cadastro de teste salvo com sucesso!";
-      mensagem.className="success";
-      form.reset();
-      idade.value="";
-
-    }catch(erro){
-      console.error(erro);
-      mensagem.textContent="Não foi possível salvar: "+erro.message;
-      mensagem.className="error";
-    }finally{
-      botao.disabled=false;
-      botao.textContent="SALVAR PACIENTE";
-    }
-  });
-}
 
 document.getElementById("entrar-hospital")
 .addEventListener("click",async()=>{
