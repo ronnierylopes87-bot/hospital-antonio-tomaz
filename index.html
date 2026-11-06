@@ -12,4 +12,35 @@ modules.forEach((m,i)=>{const b=document.createElement("button");b.textContent=m
     SUPABASE_URL,
     SUPABASE_ANON_KEY
   );
-</script></body></html>
+</script></body><div id="login-hospital" style="
+position:fixed;inset:0;background:#f1f5f9;
+z-index:9999;display:flex;align-items:center;
+justify-content:center;padding:20px;font-family:Arial">
+
+<div style="background:white;padding:25px;
+border-radius:12px;width:100%;max-width:380px">
+
+<h2 style="text-align:center;color:#1e3a8a">
+Hospital Municipal Antonio Tomaz
+</h2>
+
+<h3 style="text-align:center">Acesso ao sistema</h3>
+
+<input id="email-login" type="email"
+placeholder="E-mail do administrador"
+style="width:100%;padding:12px;margin:8px 0;box-sizing:border-box">
+
+<input id="senha-login" type="password"
+placeholder="Senha"
+style="width:100%;padding:12px;margin:8px 0;box-sizing:border-box">
+
+<button id="entrar-hospital"
+style="width:100%;padding:13px;background:#1e3a8a;
+color:white;border:0;border-radius:6px">
+ENTRAR
+</button>
+
+<p id="mensagem-login"></p>
+
+</div>
+</div></html>
