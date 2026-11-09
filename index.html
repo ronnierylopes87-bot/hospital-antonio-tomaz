@@ -98,10 +98,24 @@ const modules=[
 const nav=document.getElementById("nav");
 const view=document.getElementById("view");
 
-const supabaseClient=window.supabase.createClient(
-  SUPABASE_URL,
-  SUPABASE_ANON_KEY
-);
+let supabaseClient;
+
+try {
+  if (!window.supabase || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("Configuração do Supabase não encontrada.");
+  }
+
+  supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+} catch (erro) {
+  console.error("Erro de configuração:", erro);
+  document.getElementById("mensagem-login").textContent =
+    "Erro na configuração do sistema. Verifique o arquivo config.js.";
+  document.getElementById("entrar-hospital").disabled = true;
+}
 
 let pacientes=[];
 
