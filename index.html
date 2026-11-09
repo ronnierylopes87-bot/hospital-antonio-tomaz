@@ -992,7 +992,86 @@ botao.textContent="SALVAR AVALIAÇÃO";
 });
 
 await carregarFila();
-  }/* NAVEGAÇÃO DOS MÓDULOS */
+  }
+  /* MÓDULO DE INTERNAÇÃO E LEITOS */
+
+  function formularioInternacao(){
+  return `
+  <div class="card">
+    <h3>Mapa de leitos</h3>
+    <p class="muted">Situação dos 19 leitos hospitalares.</p>
+    <div id="mapa-leitos" class="cards">
+      Carregando leitos...
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Internações ativas</h3>
+    <div id="lista-internacoes">Carregando...</div>
+  </div>`;
+}
+
+async function configurarInternacao(){
+  const mapa=document.getElementById("mapa-leitos");
+  const lista=document.getElementById("lista-internacoes");
+
+  try{
+    const {data:leitos,error}=await supabaseClient
+      .from("beds")
+      .select("id,bed_code,status")
+      .order("bed_code");
+
+    if(error)throw error;
+
+    mapa.replaceChildren();
+
+    (leitos||[]).forEach(leito=>{
+      const card=document.createElement("div");
+      card.className="card";
+
+      const nome=document.createElement("h3");
+      nome.textContent=leito.bed_code;
+
+      const status=document.createElement("p");
+      status.textContent=leito.status;
+
+      card.append(nome,status);
+      mapa.appendChild(card);
+    });
+
+    const {data:internacoes,error:erroInternacoes}=
+      await supabaseClient
+        .from("admissions")
+        .select("id,bed_id,admitted_at,status")
+        .eq("status","Ativa")
+        .order("admitted_at",{ascending:false});
+
+    if(erroInternacoes)throw erroInternacoes;
+
+    lista.replaceChildren();
+
+    if(!internacoes || internacoes.length===0){
+      lista.textContent="Nenhuma internação ativa.";
+    }else{
+      internacoes.forEach(internacao=>{
+        const item=document.createElement("div");
+        item.className="attendance-item";
+
+        const leito=leitos.find(l=>l.id===internacao.bed_id);
+
+        item.textContent=
+          "Leito: "+(leito?.bed_code||"Não localizado")+
+          " — Admissão: "+
+          new Date(internacao.admitted_at).toLocaleString("pt-BR");
+
+        lista.appendChild(item);
+      });
+    }
+
+  }catch(erro){
+    mapa.textContent="Erro ao carregar leitos: "+erro.message;
+    lista.textContent="Erro ao carregar internações.";
+  }
+  /* NAVEGAÇÃO DOS MÓDULOS */
 
 function show(i){
   [...nav.children].forEach((b,j)=>{
@@ -1014,6 +1093,8 @@ function show(i){
     conteudo=formularioRecepcao();
   }else if(i===3){
     conteudo=formularioEmergencia();
+  }else if(i===6){
+    conteudo=formularioInternacao();
   }else{
     conteudo='<div class="card"><b>Módulo planejado</b><p class="muted">Esta área será desenvolvida após definir os fluxos e permissões.</p></div>';
   }
@@ -1028,6 +1109,7 @@ function show(i){
   if(i===1)configurarFormularioPaciente();
   if(i===2)configurarFormularioRecepcao();
   if(i===3)configurarEmergencia();
+  if(i===6)configurarInternacao();
 }
 
 modules.forEach((m,i)=>{
